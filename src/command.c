@@ -29,6 +29,7 @@ extern size_t curs_row;
 extern size_t curs_col;
 extern void* g_mb_info;
 extern void main_menu_loop(void);
+extern void cube_main(void);
 extern void paint_main(void);
 extern void bf(char input[]);
 int macos = 0; // macos mode
@@ -75,7 +76,7 @@ void shutdown() {
     gotoxy(0, 0);
     set_color(15, 0);
     repaint_screen(15,0);
-    print("It is now safe to power off your computer.");
+    print("It is now safe to power off your computer.  :)");
     asm volatile ("hlt"); 
 }
 
@@ -216,11 +217,12 @@ void process_command(const char* command) {
             println("Available fun commands:");
             println("Beep <freq> <dur> - Beep at frequency (Hz) and duration (ms).");
             println("BF <code> - The programming language of Brainfu-, I mean, boyfriend.");
+            println("Cube - Render a basic 3D cube in the console");
             println("Games - Launch the game menu.");
             println("Poem - Display the Beacon poem.");
             println("Paint - Open Turrpaint.");
             println("macOS - This is not macOS. This command is pointless.");
-            curs_row += 6;
+            curs_row += 7;
             update_cursor();
         } else if (stricmp(args[0], "3") == 0) {
             println("Available system commands:");

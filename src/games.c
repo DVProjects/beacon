@@ -813,7 +813,152 @@
          }
      }
  }
- 
+ #define MS_W 9
+#define MS_H 9
+#define MS_MINES 10
+
+static uint8_t ms_mines[MS_H][MS_W];
+static uint8_t ms_revealed[MS_H][MS_W];
+static uint8_t ms_flagged[MS_H][MS_W];
+
+static int cur_x, cur_y;
+static int ms_game_over;
+static int ms_first_move;
+
+static int count_adjacent(int y, int x) {
+    int c = 0;
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            int ny = y + dy;
+            int nx = x + dx;
+            if (ny >= 0 && ny < MS_H && nx >= 0 && nx < MS_W) {
+                c += ms_mines[ny][nx];
+            }
+        }
+    }
+    return c;
+}
+
+static void flood_reveal(int y, int x) {
+    if (y < 0 || y >= MS_H || x < 0 || x >= MS_W) return;
+    if (ms_revealed[y][x] || ms_flagged[y][x]) return;
+
+    ms_revealed[y][x] = 1;
+    if (count_adjacent(y, x) != 0) return;
+
+    for (int dy = -1; dy <= 1; dy++)
+        for (int dx = -1; dx <= 1; dx++)
+            flood_reveal(y + dy, x + dx);
+}
+
+static void place_mines(int safe_y, int safe_x) {
+    int placed = 0;
+    while (placed < MS_MINES) {
+        int y = rand() % MS_H;
+        int x = rand() % MS_W;
+        if (ms_mines[y][x]) continue;
+        if (y == safe_y && x == safe_x) continue;
+        ms_mines[y][x] = 1;
+        placed++;
+    }
+}
+
+static void draw_board(void) {
+    clear_screen();
+    print("minesweeper (wasd move, space reveal, f flag, q quit)\n\n");
+
+    for (int y = 0; y < MS_H; y++) {
+        for (int x = 0; x < MS_W; x++) {
+            int is_cursor = (x == cur_x && y == cur_y);
+            if (is_cursor) set_color(0, 15);
+
+            if (ms_revealed[y][x]) {
+                if (ms_mines[y][x]) {
+                    set_color(12, 0);
+                    print("* ");
+                } else {
+                    int n = count_adjacent(y, x);
+                    if (n == 0) print(". ");
+                    else {
+                        print_number(n);
+                        print(" ");
+                    }
+                }
+            } else if (ms_flagged[y][x]) {
+                set_color(14, 0);
+                print("F ");
+            } else {
+                print("# ");
+            }
+
+            set_color(15, 0);
+        }
+        print("\n");
+    }
+}
+
+static int check_win(void) {
+    int revealed = 0;
+    for (int y = 0; y < MS_H; y++)
+        for (int x = 0; x < MS_W; x++)
+            if (ms_revealed[y][x])
+                revealed++;
+    return revealed == (MS_W * MS_H - MS_MINES);
+}
+
+static void run_minesweeper(void) {
+    memset(ms_mines, 0, sizeof(ms_mines));
+    memset(ms_revealed, 0, sizeof(ms_revealed));
+    memset(ms_flagged, 0, sizeof(ms_flagged));
+
+    srand(extra_rand());
+    cur_x = 0;
+    cur_y = 0;
+    ms_game_over = 0;
+    ms_first_move = 1;
+
+    while (!ms_game_over) {
+        draw_board();
+
+        int c;
+        while ((c = getch()) < 0) { }
+
+        if (c == 'q') return;
+        if (c == 'w' && cur_y > 0) cur_y--;
+        if (c == 's' && cur_y < MS_H - 1) cur_y++;
+        if (c == 'a' && cur_x > 0) cur_x--;
+        if (c == 'd' && cur_x < MS_W - 1) cur_x++;
+
+        if (c == 'f') {
+            if (!ms_revealed[cur_y][cur_x])
+                ms_flagged[cur_y][cur_x] ^= 1;
+        }
+
+        if (c == ' ') {
+            if (ms_first_move) {
+                place_mines(cur_y, cur_x);
+                ms_first_move = 0;
+            }
+
+            if (ms_mines[cur_y][cur_x]) {
+                ms_game_over = 1;
+                draw_board();
+                print("\nyou died. you successfully failed.\n");
+                getch();
+                return;
+            }
+
+            flood_reveal(cur_y, cur_x);
+            if (check_win()) {
+                draw_board();
+                print("\nok nerd, you win.\n");
+                getch();
+                return;
+            }
+        }
+    }
+}
+
  void main_menu_loop(void) {
      clear_screen();
      char choice_buf[16];
@@ -839,12 +984,14 @@
          set_color(12, 0);  print("  3");     // red “3”
          set_color(15, 0);  print(". guessing game\n");
          set_color(12, 0);  print("  4");     // red “4”
+         set_color(15, 0);  print(". minesweeper\n\n");
+         set_color(12, 0);  print("  5");     // red “5”
          set_color(15, 0);  print(". quit to os\n\n");
-         // move prompt to bottom row (assumes 25 rows, index 24)
-         gotoxy(0, 24);
+         // move prompt to bottom row (assumes 25 rows, index 23)
+         gotoxy(0, 23);
          set_color(15, 0);
          print("> ");
-         gotoxy(2, 24);
+         gotoxy(2, 23);
          read_line(choice_buf, sizeof(choice_buf));
          int choice = parse_int(choice_buf);
  
@@ -859,6 +1006,9 @@
                  run_guessing_game();
                  break;
              case 4:
+                run_minesweeper();
+                break;
+             case 5:
                  clear_screen();
                  print(" thanks for playing - returning to os\n");
                  delay_ms(500);
