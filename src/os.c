@@ -97,7 +97,7 @@ void start() {
     set_color(GREEN_COLOR, WHITE_COLOR);
     repaint_screen(GREEN_COLOR, WHITE_COLOR);
     gotoxy(0, 0);
-    print("*boot jingle*");
+    print("Welcome to Beacon!");
     gotoxy(0, 0);
     beep(440, 1000);
     beep(2, 400);

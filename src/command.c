@@ -332,6 +332,8 @@ void process_command(const char* command) {
             }
         }
         bf(combined_args);
+    } else if (stricmp(cmd, "cube") == 0) {
+        cube_main();
     } else if (stricmp(cmd, "games") == 0) {
         main_menu_loop();
 
